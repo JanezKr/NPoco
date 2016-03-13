@@ -14,7 +14,7 @@
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <DefineConstants>NET45</DefineConstants>
-    <AssemblyVersion>2016.3.13.4</AssemblyVersion>
+    <AssemblyVersion>2016.3.13.8</AssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

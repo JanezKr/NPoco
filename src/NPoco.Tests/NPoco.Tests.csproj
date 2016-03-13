@@ -13,7 +13,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
-    <AssemblyVersion>2016.3.13.4</AssemblyVersion>
+    <AssemblyVersion>2016.3.13.6</AssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -127,6 +127,7 @@
     <Compile Include="PagingHelper.cs" />
     <Compile Include="ParameterHelper.cs" />
     <Compile Include="PocoExpandoTests.cs" />
+    <Compile Include="JkReferenceTests.cs" />
     <Compile Include="SnapshotterTests.cs" />
     <Compile Include="FluentMappings\ColumnConfigurationBuilderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
