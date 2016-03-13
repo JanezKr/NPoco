@@ -11,5 +11,9 @@ namespace NPoco.Linq
         public PocoMember PocoMemberJoin { get; set; }
         public List<PocoMember> PocoMembers { get; set; }
         public JoinType JoinType { get; set; }
+
+        // JK
+        public List<MemberInfo> ParentMemberInfoChain { get; set; }
+        // JK
     }
 }

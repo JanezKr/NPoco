@@ -42,6 +42,7 @@ namespace NPoco
         IEnumerable<T> Query<T>(string sql, params object[] args);
         IEnumerable<T> Query<T>(Sql sql);
         IQueryProviderWithIncludes<T> Query<T>();
+        IQueryProviderWithIncludes<T> QueryWithInclude<T>();
         T SingleById<T>(object primaryKey);
         T SingleOrDefaultById<T>(object primaryKey);
         T Single<T>(string sql, params object[] args);

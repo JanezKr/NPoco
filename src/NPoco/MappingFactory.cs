@@ -9,8 +9,8 @@ namespace NPoco
     public class MappingFactory
     {
         public static List<Func<IRowMapper>> RowMappers { get; private set; } 
-        private readonly PocoData _pocoData;
-        private readonly IRowMapper _rowMapper;
+        private readonly PocoData _pocoData;        
+        private readonly IRowMapper _rowMapper;      
 
         static MappingFactory()
         {
@@ -23,11 +23,15 @@ namespace NPoco
             };
         }
 
-        public MappingFactory(PocoData pocoData, IDataReader dataReader)
+        // JK
+        public MappingFactory(PocoData pocoData, IDataReader dataReader, Database database)
+        // JK
         {
             _pocoData = pocoData;
             _rowMapper = RowMappers.Select(mapper => mapper()).First(x => x.ShouldMap(pocoData));
-            _rowMapper.Init(dataReader, pocoData);
+            // JK
+            _rowMapper.Init(dataReader, pocoData, database);
+            // JK
         }
 
         public object Map(IDataReader dataReader, object instance)

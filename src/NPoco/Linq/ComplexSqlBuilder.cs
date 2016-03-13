@@ -35,11 +35,11 @@ namespace NPoco.Linq
                 return new Sql(finalsql, _sqlExpression.Context.Params);
             }
 
-            var sql = BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), selectMembers, false, distinct);
+            var sql = BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), selectMembers, false, distinct, typeof(T));
             return sql;
         }
 
-        public Sql BuildJoin(IDatabase database, SqlExpression<T> sqlExpression, List<JoinData> joinSqlExpressions, List<SelectMember> newMembers, bool count, bool distinct)
+        public Sql BuildJoin(IDatabase database, SqlExpression<T> sqlExpression, List<JoinData> joinSqlExpressions, List<SelectMember> newMembers, bool count, bool distinct, Type baseType)
         {
             var modelDef = _pocoData;
             var sqlTemplate = count
@@ -63,7 +63,7 @@ namespace NPoco.Linq
             where = (string.IsNullOrEmpty(where) ? string.Empty : "\n" + where);
 
             // build joins and add cols
-            var joins = BuildJoinSql(database, joinSqlExpressions, ref cols);
+            var joins = BuildJoinSql(database, joinSqlExpressions, ref cols, baseType);
 
             // build orderbys
             ISqlExpression exp = sqlExpression;
@@ -113,7 +113,7 @@ namespace NPoco.Linq
             return new Sql(newsql, _sqlExpression.Context.Params);
         }
 
-        private static string BuildJoinSql(IDatabase database, List<JoinData> joinSqlExpressions, ref List<StringPocoCol> cols)
+        private static string BuildJoinSql(IDatabase database, List<JoinData> joinSqlExpressions, ref List<StringPocoCol> cols, Type baseType)
         {
             var joins = new List<string>();
 
@@ -121,7 +121,26 @@ namespace NPoco.Linq
             {
                 var member = joinSqlExpression.PocoMemberJoin;
 
-                cols = cols.Concat(joinSqlExpression.PocoMembers
+
+                // JK
+                var pocoMembers = joinSqlExpression.PocoMembers;
+
+
+                //if (joinSqlExpression.PocoMember.MemberInfo.DeclaringType != baseType)
+                if (joinSqlExpression.ParentMemberInfoChain != null)
+                {
+                    foreach (var parentChainMember in joinSqlExpression.ParentMemberInfoChain)
+                    {
+                        foreach (var pocoMember in pocoMembers)
+                        {
+                            //pocoMember.PocoColumn.AddRealation2MemberInfoChain(joinSqlExpression.PocoMember.MemberInfo.DeclaringType);
+                            pocoMember.PocoColumn.AddRealation2MemberInfoChain(parentChainMember);
+                        }
+                    }
+                }
+                // JK
+
+                cols = cols.Concat(pocoMembers
                     .Where(x => x.ReferenceType == ReferenceType.None)
                     .Where(x => x.PocoColumn != null)
                     .Select(x => new StringPocoCol
@@ -150,15 +169,39 @@ namespace NPoco.Linq
                     .Single(x => x.MemberInfo == memberInfo);
 
                 var pocoColumn1 = pocoMember.PocoColumn;
-                var pocoMember2 = pocoMember.PocoMemberChildren.Single(x => x.Name == pocoMember.ReferenceMemberName);
-                var pocoColumn2 = pocoMember2.PocoColumn;
 
-                pocoColumn2.TableInfo.AutoAlias = tableAlias ?? pocoColumn2.TableInfo.AutoAlias;
+                // JK
+                var memberReferenceMemberNames = pocoMember.ReferenceMemberName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                var firstMember = true;
+                var pocoRelMember = pocoMember;
+                var onSql = string.Empty;
+                foreach (var referenceMemberName in memberReferenceMemberNames)
+                {
 
-                var onSql = _database.DatabaseType.EscapeTableName(pocoColumn1.TableInfo.AutoAlias)
-                            + "." + _database.DatabaseType.EscapeSqlIdentifier(pocoColumn1.ColumnName)
-                            + " = " + _database.DatabaseType.EscapeTableName(pocoColumn2.TableInfo.AutoAlias)
-                            + "." + _database.DatabaseType.EscapeSqlIdentifier(pocoColumn2.ColumnName);
+                    var pocoMember2 = pocoMember.PocoMemberChildren.Single(x => x.Name == referenceMemberName);
+                    var pocoColumn2 = pocoMember2.PocoColumn;
+
+                    pocoColumn2.TableInfo.AutoAlias = tableAlias ?? pocoColumn2.TableInfo.AutoAlias;
+
+                    if (firstMember)
+                    {
+                        pocoRelMember = pocoMember2;
+                        onSql = _database.DatabaseType.EscapeTableName(pocoColumn1.TableInfo.AutoAlias)
+                                    + "." + _database.DatabaseType.EscapeSqlIdentifier(pocoColumn1.ColumnName)
+                                    + " = " + _database.DatabaseType.EscapeTableName(pocoColumn2.TableInfo.AutoAlias)
+                                    + "." + _database.DatabaseType.EscapeSqlIdentifier(pocoColumn2.ColumnName);
+
+                        firstMember = false;
+                    }
+                    else
+                    {
+                        onSql += " AND " + _database.DatabaseType.EscapeTableName(pocoColumn1.TableInfo.AutoAlias)
+                                    + "." + _database.DatabaseType.EscapeSqlIdentifier(pocoColumn2.ColumnName)
+                                    + " = " + _database.DatabaseType.EscapeTableName(pocoColumn2.TableInfo.AutoAlias)
+                                    + "." + _database.DatabaseType.EscapeSqlIdentifier(pocoColumn2.ColumnName);
+                    }
+
+                }
 
                 if (!joinExpressions.ContainsKey(onSql))
                 {
@@ -166,12 +209,13 @@ namespace NPoco.Linq
                     {
                         OnSql = onSql,
                         PocoMember = pocoMember,
-                        PocoMemberJoin = pocoMember2,
+                        PocoMemberJoin = pocoRelMember,
                         PocoMembers = pocoMember.PocoMemberChildren,
                         JoinType = joinType
                     });
                 }
 
+                // JK
                 members = pocoMember.PocoMemberChildren;
             }
 

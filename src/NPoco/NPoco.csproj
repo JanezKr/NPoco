@@ -14,6 +14,7 @@
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <DefineConstants>NET45</DefineConstants>
+    <AssemblyVersion>2016.3.13.4</AssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -37,6 +38,7 @@
     <DefineConstants>NET45</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Condition="!$(DefineConstants.Contains('NET35'))" Include="System.Net" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />

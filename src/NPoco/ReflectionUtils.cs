@@ -168,5 +168,34 @@ namespace NPoco
             }
             return false;
         }
+
+
+        // JK
+        public static Type GetUnderlyingType(this MemberInfo member)
+        {
+            //Type type = GetMemberInfoType(member);
+
+            Type type;
+            if (member.MemberType == MemberTypes.Field)
+                type = ((FieldInfo) member).FieldType;
+            else if (member.MemberType == MemberTypes.Property)
+                type = ((PropertyInfo) member).PropertyType;
+            else if (member.MemberType == MemberTypes.Custom)
+                type = ((DynamicMember) member).ReflectedType;
+            else if (member.MemberType == MemberTypes.TypeInfo)
+                type = ((TypeInfo) member).UnderlyingSystemType;
+            else
+                throw new NotSupportedException();
+
+
+
+            if (type != null)
+            {
+                return  type.GetGenericArguments().FirstOrDefault() ?? type;
+            }
+
+            return null;
+        }
+        // JK
     }
 }

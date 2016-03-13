@@ -58,9 +58,12 @@ namespace NPoco
             }
             else if (reference.Any())
             {
+                //ci.ColumnAlias = mi.Name;
+                //ci.ColumnName = mi.Name;
                 ci.ReferenceType = reference.First().ReferenceType;
                 ci.ReferenceMemberName = reference.First().ReferenceMemberName ?? "Id";
-                ci.ColumnName = reference.First().ColumnName ?? mi.Name + "Id";
+                ci.ColumnName = reference.First().ColumnName ?? mi.Name + "Id";                
+                //ci.ColumnAlias = reference.First().ColumnName ?? mi.Name + "Id";                
                 return ci;
             }
             else if (PocoDataBuilder.IsList(mi))

@@ -23,6 +23,22 @@ namespace NPoco
 
         public List<MemberInfo> MemberInfoChain { get; set; }
 
+        // JK
+        // Add realation to MemberInfoChain if not exsist already
+        public void AddRealation2MemberInfoChain(MemberInfo relation)
+        {
+            foreach (var member in MemberInfoChain)
+            {
+                if ((member.GetUnderlyingType() == relation) || (member == relation))
+                {
+                    return;
+                }
+            }
+
+            MemberInfoChain.Insert(0, relation);
+        }
+        // JK
+
         private string _memberInfoKey;
         public string MemberInfoKey { get { return _memberInfoKey ?? (_memberInfoKey = GenerateKey(MemberInfoChain)); } }
 
@@ -80,7 +96,10 @@ namespace NPoco
             if (ReferenceType == ReferenceType.Foreign)
             {
                 var member = pd.Members.Single(x => x.MemberInfo == MemberInfo);
-                var column = member.PocoMemberChildren.SingleOrDefault(x => x.Name == member.ReferenceMemberName);
+                // JK
+                var memberRferenceMemberNameFirst = member.ReferenceMemberName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).FirstOrDefault();
+                // JK
+                var column = member.PocoMemberChildren.SingleOrDefault(x => x.Name == memberRferenceMemberNameFirst);
                 if (column == null)
                 {
                     throw new Exception(string.Format("Could not find member on '{0}' with name '{1}'", member.MemberInfo.GetMemberInfoType(), member.ReferenceMemberName));

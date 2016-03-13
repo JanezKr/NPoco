@@ -9,15 +9,22 @@ namespace NPoco.RowMappers
     {
         bool ShouldMap(PocoData pocoData);
         object Map(IDataReader dataReader, RowMapperContext context);
-        void Init(IDataReader dataReader, PocoData pocoData);
+        // JK
+        void Init(IDataReader dataReader, PocoData pocoData, Database database);
+        // JK
     }
 
     public abstract class RowMapper : IRowMapper
     {
         public abstract bool ShouldMap(PocoData pocoData);
 
-        public virtual void Init(IDataReader dataReader, PocoData pocoData)
+        // JK
+        protected Database _database;
+
+        public virtual void Init(IDataReader dataReader, PocoData pocoData, Database database)
+        // JK
         {
+            _database = database;
         }
 
         private PosName[] _columnNames;

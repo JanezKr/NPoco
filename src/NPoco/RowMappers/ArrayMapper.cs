@@ -13,7 +13,9 @@ namespace NPoco.RowMappers
             return pocoData.Type.IsArray;
         }
 
-        public override void Init(IDataReader dataReader, PocoData pocoData)
+        // JK
+        public override void Init(IDataReader dataReader, PocoData pocoData, Database database)
+        // JK
         {
             _posNames = GetColumnNames(dataReader, pocoData);
         }

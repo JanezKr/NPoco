@@ -15,7 +15,9 @@ namespace NPoco.RowMappers
                    || pocoData.Type == typeof (IDictionary<string, object>);
         }
 
-        public override void Init(IDataReader dataReader, PocoData pocoData)
+        // JK => is cuorrect virtual = shouldn't be override?
+        public override void Init(IDataReader dataReader, PocoData pocoData, Database database)
+        // JK
         {
             _posNames = GetColumnNames(dataReader, pocoData);
         }

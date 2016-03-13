@@ -12,10 +12,12 @@ namespace NPoco.RowMappers
             return pocoData.Type.IsValueType || pocoData.Type == typeof (string) || pocoData.Type == typeof (byte[]);
         }
 
-        public override void Init(IDataReader dataReader, PocoData pocoData)
+        // JK
+        public override void Init(IDataReader dataReader, PocoData pocoData, Database database)
+        // JK
         {
             _converter = GetConverter(pocoData, null, dataReader.GetFieldType(0), pocoData.Type) ?? (x => x);
-            base.Init(dataReader, pocoData);
+            base.Init(dataReader, pocoData, database);
         }
 
         public override object Map(IDataReader dataReader, RowMapperContext context)

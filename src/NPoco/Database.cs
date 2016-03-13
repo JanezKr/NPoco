@@ -1,5 +1,5 @@
 /* NPoco 3.0 - A Tiny ORMish thing for your POCO's.
- * Copyright 2011-2015. All Rights Reserved.
+ * Copyright 2011-2016. All Rights Reserved.
  * 
  * Apache License 2.0 - http://www.apache.org/licenses/LICENSE-2.0
  * 
@@ -236,8 +236,11 @@ namespace NPoco
             OnConnectionClosingInternal(_sharedConnection);
 
             _sharedConnection.Close();
-            _sharedConnection.Dispose();
-            _sharedConnection = null;
+            if (_sharedConnection != null)
+            {
+                _sharedConnection.Dispose();
+                _sharedConnection = null;
+            }
         }
 
         public VersionExceptionHandling VersionException
@@ -878,7 +881,7 @@ namespace NPoco
                 using (r)
                 {
                     var pd = PocoDataFactory.ForType(type);
-                    var factory = new MappingFactory(pd, r);
+                    var factory = new MappingFactory(pd, r, this);
                     while (true)
                     {
                         T poco;
@@ -923,7 +926,7 @@ namespace NPoco
                         foreignMember = pocoMember != null ? pocoMember.PocoMemberChildren.FirstOrDefault(x => x.Name == pocoMember.ReferenceMemberName && x.ReferenceType == ReferenceType.Foreign) : null;
                     }
 
-                    var factory = new MappingFactory(pocoData, r);
+                    var factory = new MappingFactory(pocoData, r, this);
                     object prevPoco = null;
 
                     while (true)
@@ -972,8 +975,15 @@ namespace NPoco
 
         public IQueryProviderWithIncludes<T> Query<T>()
         {
-            return new QueryProvider<T>(this);
+            return new QueryProvider<T>(this, false);
         }
+
+        // JK
+        public IQueryProviderWithIncludes<T> QueryWithInclude<T>()
+        {
+            return new QueryProvider<T>(this, true);
+        }
+        // JK
 
         private IEnumerable<T> Query<T>(T instance, Sql Sql)
         {
@@ -1159,7 +1169,7 @@ namespace NPoco
                                 break;
 
                             var pd = PocoDataFactory.ForType(types[typeIndex - 1]);
-                            var factory = new MappingFactory(pd, r);
+                            var factory = new MappingFactory(pd, r, this);
 
                             while (true)
                             {

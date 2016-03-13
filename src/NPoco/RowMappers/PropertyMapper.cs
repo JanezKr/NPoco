@@ -19,8 +19,13 @@ namespace NPoco.RowMappers
             return true;
         }
 
-        public override void Init(IDataReader dataReader, PocoData pocoData)
+        // JK
+        public override void Init(IDataReader dataReader, PocoData pocoData, Database database)
+        // JK
         {
+            // JK
+            _database = database;
+            // Jk
             var fields = GetColumnNames(dataReader, pocoData);
 
             _groupedNames = fields
@@ -69,6 +74,8 @@ namespace NPoco.RowMappers
             };
         }
 
+
+
         private IEnumerable<MapPlan> BuildMapPlans(GroupResult<PosName> groupedName, IDataReader dataReader, PocoData pocoData, List<PocoMember> pocoMembers)
         {
             // find pocomember by property name
@@ -88,7 +95,21 @@ namespace NPoco.RowMappers
                         ? CreateDynamicDictionaryPocoMembers(groupedName.SubItems, pocoData)
                         : pocoMember.PocoMemberChildren;
 
-                    var subPlans = groupedName.SubItems.SelectMany(x => BuildMapPlans(x, dataReader, pocoData, children)).ToArray();
+
+
+                    // JK
+                    var subpocoData = (pocoMember.MemberInfo.DeclaringType != pocoData.Type) ? _database.PocoDataFactory.ForType(pocoMember.MemberInfo.DeclaringType) : pocoData;
+                    if (pocoMember.IsList)
+                    {
+                        var genericType = pocoMember.MemberInfo.GetUnderlyingType();
+                        if (genericType != null)
+                        {
+                            subpocoData = _database.PocoDataFactory.ForType(genericType);
+                        }
+                    }
+                    var subPlans = groupedName.SubItems.SelectMany(x => BuildMapPlans(x, dataReader, subpocoData, children)).ToArray();
+                    //var subPlans = groupedName.SubItems.SelectMany(x => BuildMapPlans(x, dataReader, pocoData, children)).ToArray();                    
+                    // JK 
 
                     yield return (reader, instance) =>
                     {
@@ -127,6 +148,13 @@ namespace NPoco.RowMappers
 
         public static PocoMember FindMember(List<PocoMember> pocoMembers, string name)
         {
+            // JK
+            // I'm not shure if this is correct but  this fix help bind correct id-s when pocos, fk has nested list (one to many relation)
+            var referencedMember = pocoMembers.FirstOrDefault(x => IsEqual(name, x.PocoColumn.MemberInfoKey)
+                                                   || (x.PocoColumn != null && IsEqual(name, x.PocoColumn.ColumnAlias)));
+            if (referencedMember != null)
+                return referencedMember;
+            // JK
             return pocoMembers.FirstOrDefault(x => IsEqual(name, x.Name)
                                                    || (x.PocoColumn != null && IsEqual(name, x.PocoColumn.ColumnAlias)));
         }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using NPoco.Expressions;
+using System.Reflection;
 
 namespace NPoco.Linq
 {
@@ -88,10 +89,102 @@ namespace NPoco.Linq
             _sqlExpression = _sqlExpression.Where(whereExpression);
         }
 
-        public QueryProvider(Database database)
+        public QueryProvider(Database database, bool includeAllRelations)
             : this(database, null)
         {
+            // JK
+            if (includeAllRelations)
+            {
+                IncludeAllRelations(typeof(T), null);
+            }
+            // JK
         }
+
+        // JK
+        private void IncludeAllRelations(Type type, MemberInfo parentMember)
+        {
+            foreach (var property in type.GetProperties().Where(p => (p.GetCustomAttributes(typeof(ReferenceAttribute), true).Any()) && (!p.GetCustomAttributes(typeof(IgnoreAttribute), true).Any())))
+            {
+                var reference = property.GetCustomAttributes().OfType<ReferenceAttribute>().FirstOrDefault();
+                if ((reference == null) || (reference.ReferenceType == ReferenceType.Foreign) || (reference.ReferenceType == ReferenceType.OneToOne))
+                {
+                    dynamic buildComplexSql = _buildComplexSql;
+                    if (typeof(T) != type)
+                    {
+                        buildComplexSql = GetComplexSqlBuilderInstance(type);
+                    }
+
+                    var joinExpressions = buildComplexSql.GetJoinExpressions(IncludeExpression(property), null, JoinType.Left);
+                    foreach (var joinExpression in joinExpressions)
+                    {
+                        if (parentMember != null)
+                        {
+                            var join = ((JoinData) joinExpression.Value);
+                            join.ParentMemberInfoChain = new List<MemberInfo>() { parentMember };
+                            //join.AddRealation2MemberInfoChain(parentMember);
+                        }
+                        _joinSqlExpressions[joinExpression.Key] = joinExpression.Value;
+                    }
+
+
+                }
+                else {
+                    IncludeMany(IncludeManyExpression(property));
+                    var pType = property.PropertyType.GetGenericArguments().FirstOrDefault();
+                    if (pType != null)
+                    {                        
+                        IncludeAllRelations(pType, property);
+                    }
+                }
+            }
+        }
+
+        private dynamic GetComplexSqlBuilderInstance(Type type)
+        {
+            var gType = typeof(ComplexSqlBuilder<>);
+            var agtype = gType.MakeGenericType(new[] { type });
+
+            
+
+            var pocoData = _database.PocoDataFactory.ForType(type);
+           //var sqlExpression = _database.DatabaseType.ExpressionVisitor<T>(_database, _pocoData, true);
+
+            MethodInfo method = typeof(DatabaseType).GetMethod("ExpressionVisitor", new Type[] { typeof(IDatabase), typeof(PocoData), typeof(bool) });
+            MethodInfo generic = method.MakeGenericMethod(type);
+            var sqlExpression = generic.Invoke(_database.DatabaseType, new object []{ _database, _pocoData, true });
+
+            var joinSqlExpressions = new Dictionary<string, JoinData>();
+
+            return Activator.CreateInstance(agtype, _database, pocoData, sqlExpression, joinSqlExpressions);
+        }
+
+        private Expression<Func<T, IList>> IncludeManyExpression(PropertyInfo pi)
+        {
+
+            if (typeof(T) != pi.DeclaringType)
+            {
+                throw new NotImplementedException("Recursive one to many queries is not implemented");
+            }
+
+            var param = Expression.Parameter(pi.DeclaringType, "p");
+            var body = Expression.PropertyOrField(param, pi.Name);
+            return Expression.Lambda<Func<T, IList>>(body, param);
+        }
+
+        //private Expression<Func<dynamic, dynamic>> IncludeExpression(PropertyInfo pi)
+        //{
+        //    var param = Expression.Parameter(pi.DeclaringType);
+        //    var body = Expression.PropertyOrField(param, pi.Name);
+        //    return Expression.Lambda<Func<dynamic, dynamic>>(body, param);
+        //}
+
+        private Expression IncludeExpression(PropertyInfo pi)
+        {
+            var param = Expression.Parameter(pi.DeclaringType);
+            var body = Expression.PropertyOrField(param, pi.Name);
+            return Expression.Lambda(body, param);
+        }
+        // JK
 
         SqlExpression<T> ISimpleQueryProviderExpression<T>.AtlasSqlExpression { get { return _sqlExpression; } }
 
@@ -235,7 +328,7 @@ namespace NPoco.Linq
             if (whereExpression != null)
                 _sqlExpression = _sqlExpression.Where(whereExpression);
 
-            var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, true, false);
+            var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, true, false, typeof(T));
 
             return _database.ExecuteScalar<int>(sql);
         }
@@ -341,7 +434,7 @@ namespace NPoco.Linq
         {
             Sql sql;
             if (_joinSqlExpressions.Any())
-                sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, false, false);
+                sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, false, false, typeof(T));
             else
                 sql = new Sql(true, _sqlExpression.Context.ToSelectStatement(), _sqlExpression.Context.Params);
             return sql;
@@ -363,7 +456,7 @@ namespace NPoco.Linq
             if (!_joinSqlExpressions.Any())
                 return _database.QueryAsync<T>(_sqlExpression.Context.ToSelectStatement(), _sqlExpression.Context.Params);
 
-            var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, false, false);
+            var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, false, false, typeof(T));
             return _database.QueryAsync<T>(sql);
         }
 
@@ -393,7 +486,7 @@ namespace NPoco.Linq
 
         public async System.Threading.Tasks.Task<int> CountAsync()
         {
-            var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, true, false);
+            var sql = _buildComplexSql.BuildJoin(_database, _sqlExpression, _joinSqlExpressions.Values.ToList(), null, true, false, typeof(T));
             return await _database.ExecuteScalarAsync<int>(sql).ConfigureAwait(false);
         }
 
