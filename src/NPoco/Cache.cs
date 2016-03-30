@@ -32,6 +32,10 @@ namespace NPoco
         private Cache(bool useManaged)
         {
             _useManaged = useManaged;
+            // JK
+            if (useManaged)
+                _managedCache = new ManagedCache();
+            // JK
         }
 
         /// <summary>
@@ -50,7 +54,10 @@ namespace NPoco
 
         readonly Dictionary<TKey, TValue> _map = new Dictionary<TKey, TValue>();
         readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-        readonly ManagedCache _managedCache = new ManagedCache();
+
+        // JK
+        readonly ManagedCache _managedCache = null; //new ManagedCache();
+        // JK
         
         public int Count
         {
